@@ -16,10 +16,6 @@ export TOP_PID=$$
 
 source "$TEST_RESOURCE_DIR/make_kernel.sh"
 
-KERNEL_VERSION="5.4.81"
-
-KERNEL_CFG="microvm-kernel-5.4-x86_64.config"
-
 # Reset index for cmdline arguments for the following `getopts`.
 OPTIND=1
 # Flag for optionally building a guest that halts.
@@ -42,15 +38,16 @@ Options:
   -f elf|bzimage    Kernel image format (either elf or bzimage).
   -j nprocs         Number of CPUs to use for the kernel build.
   -k kernel         Name of the resulting kernel image. Has the '-halt' suffix if '-h' is passed.
+  -c cfg path       The path to the config file used to buid the kernel.
   -w workdir        Working directory for the kernel build.
-  -c                Clean up the working directory after the build.
+  -d                Clean up the working directory after the build.
   -h                Create a kernel image that halts immediately after boot.
 "
 export USAGE
 
-while getopts ":chf:j:k:w:" opt; do
+while getopts ":dhf:j:k:w:c:" opt; do
     case "$opt" in
-    c)  CLEAN=1
+    d)  CLEAN=1
         ;;
     h)  HALT=1
         ;;
@@ -62,6 +59,8 @@ while getopts ":chf:j:k:w:" opt; do
         ;;
     w)  rm -rf "$WORKDIR"
         WORKDIR=$OPTARG
+        ;;
+    c)  KERNEL_CFG=$OPTARG
         ;;
     *)  echo "$USAGE"
         exit 1
@@ -87,9 +86,16 @@ cleanup
 mkdir -p "$WORKDIR" && cd "$WORKDIR"
 
 # Step 3: acquire kernel sources & config.
+if [ -z "$KERNEL_CFG" ]; then
+    KERNEL_CFG="$TEST_RESOURCE_DIR/microvm-kernel-5.4-x86_64.config"
+    KERNEL_VERSION="5.4.81"
+else
+    # Extract the kernel version from the config file provided as parameter.
+    KERNEL_VERSION=$(cat "$KERNEL_CFG" | grep -Po '^# Linux\/x86 (([0-9]+.){2}[0-9]+)' | cut -d ' ' -f 3)
+fi
 extract_kernel_srcs "$KERNEL_VERSION"
 kernel_dir="$WORKDIR/linux-$KERNEL_VERSION"
-make_kernel_config "$TEST_RESOURCE_DIR/$KERNEL_CFG" "$kernel_dir"
+make_kernel_config "$KERNEL_CFG" "$kernel_dir"
 
 # Step 4: build *.deb packages.
 # We could build them from the kernel sources with `make deb-pkg`, but the
