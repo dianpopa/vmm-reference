@@ -98,7 +98,7 @@ mount "$WORKDIR/$DISKFILE" "$WORKDIR/$DISKMNT" # Needs to be root.
 
 # Download Ubuntu packages inside the mountpoint. We'll use the focal fossa (20.04) release.
 # Needs to be root.
-debootstrap --include openssh-server "$UBUNTUVER" "$WORKDIR/$DISKMNT"
+debootstrap --include openssh-server --variant=minbase "$UBUNTUVER" "$WORKDIR/$DISKMNT"
 
 # Set a hostname.
 echo "$HOSTNAME" > "$WORKDIR/$DISKMNT/etc/hostname"
